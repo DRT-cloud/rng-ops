@@ -1,7 +1,7 @@
 {
   "name": "rng-ops",
   "productName": "RNG Ops",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "RNG Ops — browser-based, offline-first multi-stage match scoring.",
   "license": "MIT",
   "author": {

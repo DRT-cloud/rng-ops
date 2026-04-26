@@ -119,7 +119,7 @@ function buildMenu(win) {
         },
         {
           label: "Project on GitHub",
-          click: () => shell.openExternal("https://github.com/DRT-cloud/biathlon-ops"),
+          click: () => shell.openExternal("https://github.com/DRT-cloud/rng-ops"),
         },
       ],
     },
@@ -145,6 +145,21 @@ function startServer() {
     NODE_ENV: "production",
     PORT: String(PORT),
     DATABASE_PATH: DB_PATH,
+    // Critical: tell the packaged Electron binary to behave as plain Node.
+    // Without this, spawn(process.execPath, ...) launches another GUI process
+    // and the bundled server never runs.
+    ELECTRON_RUN_AS_NODE: "1",
+  };
+
+  // Persist server output to a log file in user-data so failures are diagnosable.
+  const LOG_PATH = path.join(USER_DATA, "server.log");
+  try { fs.writeFileSync(LOG_PATH, `--- ${new Date().toISOString()} starting server ---\n`); } catch {}
+  const logStream = fs.createWriteStream(LOG_PATH, { flags: "a" });
+  let lastOutput = "";
+  const captureOutput = (b) => {
+    const s = b.toString();
+    lastOutput = (lastOutput + s).slice(-4000);
+    return s;
   };
 
   serverProcess = spawn(process.execPath, [SERVER_ENTRY], {
@@ -153,14 +168,22 @@ function startServer() {
     windowsHide: true,
   });
 
-  serverProcess.stdout.on("data", (b) => process.stdout.write(`[srv] ${b}`));
-  serverProcess.stderr.on("data", (b) => process.stderr.write(`[srv] ${b}`));
+  serverProcess.stdout.on("data", (b) => { const s = captureOutput(b); logStream.write(s); process.stdout.write(`[srv] ${s}`); });
+  serverProcess.stderr.on("data", (b) => { const s = captureOutput(b); logStream.write(s); process.stderr.write(`[srv] ${s}`); });
   serverProcess.on("exit", (code) => {
+    logStream.write(`\n[srv] exited (${code})\n`);
     console.log(`[srv] exited (${code})`);
     serverProcess = null;
   });
 
-  return waitForPort(PORT);
+  serverProcess.lastOutput = () => lastOutput;
+  serverProcess.logPath = LOG_PATH;
+
+  return waitForPort(PORT).catch((err) => {
+    const tail = lastOutput || "(no server output captured)";
+    err.message = `${err.message}\n\nServer log tail:\n${tail}\n\nFull log: ${LOG_PATH}`;
+    throw err;
+  });
 }
 
 function stopServer() {
