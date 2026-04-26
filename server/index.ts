@@ -1,4 +1,6 @@
-import "dotenv/config";
+// dotenv is optional — only used in dev. In packaged Electron, env vars are set
+// by the main process. Wrap the require so a missing module never crashes prod.
+try { require("dotenv/config"); } catch { /* dotenv unavailable — fine in production */ }
 import express, { Response, NextFunction } from 'express';
 import type { Request } from 'express';
 import { registerRoutes } from "./routes";
