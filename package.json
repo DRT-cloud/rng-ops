@@ -1,7 +1,7 @@
 {
   "name": "rng-ops",
   "productName": "RNG Ops",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "description": "RNG Ops — browser-based, offline-first multi-stage match scoring.",
   "license": "MIT",
   "author": {
@@ -138,9 +138,15 @@
     "productName": "RNG Ops",
     "copyright": "© 2026 DRT-cloud",
     "asar": true,
+    "asarUnpack": [
+      "node_modules/better-sqlite3/**/*"
+    ],
     "files": [
       "electron/**/*",
-      "package.json"
+      "package.json",
+      "node_modules/better-sqlite3/**/*",
+      "node_modules/bindings/**/*",
+      "node_modules/file-uri-to-path/**/*"
     ],
     "extraResources": [
       {
