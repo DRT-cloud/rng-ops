@@ -13,15 +13,14 @@ import type { Event, PenaltyDef, DayDef } from "@shared/schema";
 import Papa from "papaparse";
 import { Trash2, Upload, Plus, CheckCircle2, FileText, AlertCircle } from "lucide-react";
 
-// PDF.js via ESM
+// PDF.js via ESM — run in the main thread so our Uint8Array.prototype.toHex
+// polyfill (loaded in main.tsx) applies. Avoids needing to inject the polyfill
+// into the worker script as well.
 import * as pdfjs from "pdfjs-dist";
-// @ts-ignore
-import pdfWorker from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-pdfjs.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 async function extractPdfText(file: File): Promise<string> {
   const buf = await file.arrayBuffer();
-  const doc = await pdfjs.getDocument({ data: buf }).promise;
+  const doc = await pdfjs.getDocument({ data: buf, disableWorker: true } as any).promise;
   let out = "";
   for (let i = 1; i <= doc.numPages; i++) {
     const p = await doc.getPage(i);
