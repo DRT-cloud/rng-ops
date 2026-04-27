@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useRoute } from 'wouter';
 import { matchApi, type Competitor, type EventDetail } from '../lib/api';
 import { downloadCsv, parseCsv, serializeCsv } from '../lib/csv';
+import { parseSquaddingHtml, type SquaddingParseResult } from '@/lib/parseSquaddingHtml';
 
 const STATUS_COLORS: Record<Competitor['status'], string> = {
   registered: 'bg-gray-200 text-gray-800',
@@ -21,6 +22,8 @@ export default function RegistrationPage() {
   const [search, setSearch] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [squadPreview, setSquadPreview] = useState<{ result: SquaddingParseResult; fileName: string } | null>(null);
+  const [squadImporting, setSquadImporting] = useState(false);
 
   // Add form
   const [bib, setBib] = useState('');
@@ -69,6 +72,49 @@ export default function RegistrationPage() {
     if (!confirm(`Delete ${c.first_name} ${c.last_name} (#${c.bib})?`)) return;
     await matchApi.deleteCompetitor(c.id);
     refresh();
+  }
+
+  async function handleSquaddingFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setError(null);
+    setImportMsg(null);
+    try {
+      const text = await file.text();
+      const result = parseSquaddingHtml(text);
+      if (result.totals.shooters === 0) {
+        setError(`No shooters found in ${file.name}. Make sure this is a PractiScore squadding HTML export.`);
+        setSquadPreview(null);
+      } else {
+        setSquadPreview({ result, fileName: file.name });
+      }
+    } catch (err: any) {
+      setError(`Failed to parse squadding HTML: ${err?.message ?? err}`);
+      setSquadPreview(null);
+    } finally {
+      e.target.value = '';
+    }
+  }
+
+  async function commitSquaddingImport(replace: boolean) {
+    if (!squadPreview) return;
+    if (replace && !confirm('Replace ALL existing competitors and squads with this import? This cannot be undone.')) return;
+    setSquadImporting(true);
+    setError(null);
+    setImportMsg(null);
+    try {
+      const out = await matchApi.importSquadding(eventId, squadPreview.result.bays, replace);
+      setImportMsg(
+        `Imported ${out.competitors} competitors across ${out.squads} squad slots` +
+        (out.divisions > 0 ? ` (auto-created ${out.divisions} division${out.divisions === 1 ? '' : 's'})` : '') + '.',
+      );
+      setSquadPreview(null);
+      await refresh();
+    } catch (err: any) {
+      setError(err?.message ?? String(err));
+    } finally {
+      setSquadImporting(false);
+    }
   }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
@@ -142,6 +188,10 @@ export default function RegistrationPage() {
         </div>
         <div className="space-x-2">
           <label className="px-3 py-2 text-sm rounded border hover:bg-accent cursor-pointer inline-block">
+            Import Squadding HTML
+            <input type="file" accept=".html,.htm,text/html" onChange={handleSquaddingFile} className="hidden" />
+          </label>
+          <label className="px-3 py-2 text-sm rounded border hover:bg-accent cursor-pointer inline-block">
             Import CSV
             <input type="file" accept=".csv,text/csv" onChange={handleImport} className="hidden" />
           </label>
@@ -154,6 +204,74 @@ export default function RegistrationPage() {
 
       {error && <p className="mb-3 text-red-600 text-sm">{error}</p>}
       {importMsg && <p className="mb-3 text-green-700 text-sm">{importMsg}</p>}
+
+      {squadPreview && (
+        <div className="rounded border-2 border-amber-500 bg-amber-50 dark:bg-amber-950/20 p-4 mb-6">
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div>
+              <h3 className="font-medium">Squadding preview — {squadPreview.fileName}</h3>
+              <p className="text-sm text-muted-foreground mt-1">
+                {squadPreview.result.totals.bays} bays · {squadPreview.result.totals.shooters} shooters ·{' '}
+                {squadPreview.result.totals.emptySlots} empty slots ·{' '}
+                {squadPreview.result.totals.divisions.length} division{squadPreview.result.totals.divisions.length === 1 ? '' : 's'}:{' '}
+                <span className="font-mono">{squadPreview.result.totals.divisions.join(', ')}</span>
+              </p>
+              {squadPreview.result.warnings.length > 0 && (
+                <details className="mt-2 text-xs">
+                  <summary className="cursor-pointer text-amber-700 dark:text-amber-400">
+                    {squadPreview.result.warnings.length} warning{squadPreview.result.warnings.length === 1 ? '' : 's'}
+                  </summary>
+                  <ul className="mt-1 list-disc ml-5 space-y-0.5">
+                    {squadPreview.result.warnings.slice(0, 10).map((w, i) => <li key={i}>{w}</li>)}
+                    {squadPreview.result.warnings.length > 10 && (
+                      <li className="text-muted-foreground">…{squadPreview.result.warnings.length - 10} more</li>
+                    )}
+                  </ul>
+                </details>
+              )}
+              <details className="mt-2 text-xs">
+                <summary className="cursor-pointer text-muted-foreground">Show bay breakdown</summary>
+                <table className="mt-2 text-xs font-mono">
+                  <thead><tr className="text-left"><th className="pr-3">Day</th><th className="pr-3">Bay</th><th className="pr-3">Time</th><th>Shooters</th></tr></thead>
+                  <tbody>
+                    {squadPreview.result.bays.map((b) => (
+                      <tr key={`${b.day}-${b.bay}`}>
+                        <td className="pr-3">{b.day}</td>
+                        <td className="pr-3">{b.bay}</td>
+                        <td className="pr-3">{b.timeStart && b.timeEnd ? `${b.timeStart}–${b.timeEnd}` : '—'}</td>
+                        <td>{b.slots.length}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </details>
+            </div>
+            <div className="flex flex-col gap-2 shrink-0">
+              <button
+                onClick={() => commitSquaddingImport(false)}
+                disabled={squadImporting}
+                className="px-3 py-2 text-sm rounded bg-primary text-primary-foreground disabled:opacity-50"
+              >
+                {squadImporting ? 'Importing…' : 'Import (append)'}
+              </button>
+              <button
+                onClick={() => commitSquaddingImport(true)}
+                disabled={squadImporting}
+                className="px-3 py-2 text-sm rounded border border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 disabled:opacity-50"
+              >
+                Replace all
+              </button>
+              <button
+                onClick={() => setSquadPreview(null)}
+                disabled={squadImporting}
+                className="px-3 py-2 text-sm rounded border"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="rounded border p-4 mb-6 bg-card">
         <h3 className="font-medium mb-3">Add Competitor</h3>
@@ -226,9 +344,10 @@ export default function RegistrationPage() {
         </table>
       </div>
 
-      <p className="mt-4 text-xs text-muted-foreground">
-        CSV import format: <code>bib,first,last,division</code> (header row required). Division must match a division code defined in setup.
-      </p>
+      <div className="mt-4 text-xs text-muted-foreground space-y-1">
+        <p><strong>Squadding HTML</strong>: PractiScore squadding export (Print → Save as HTML). Auto-creates divisions and assigns sequential 3-digit bibs. Each shooter is also assigned to a day/bay/time slot.</p>
+        <p><strong>CSV</strong>: <code>bib,first,last,division</code> (header row required). Division must match a division code defined in setup.</p>
+      </div>
     </div>
   );
 }

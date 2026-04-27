@@ -231,6 +231,36 @@ export const matchApi = {
     `/api/match/events/${eventId}/competitors/import`,
     { rows },
   ),
+  importSquadding: (
+    eventId: number,
+    bays: Array<{
+      day: 'FRIDAY' | 'SATURDAY' | 'SUNDAY' | 'STAFF';
+      bay: number;
+      timeStart: string | null;
+      timeEnd: string | null;
+      slots: Array<{
+        slotNumber: number;
+        firstName: string;
+        lastName: string;
+        divisionName: string;
+      }>;
+    }>,
+    replace = false,
+  ) => request<{ ok: true; competitors: number; squads: number; divisions: number }>(
+    'POST',
+    `/api/match/events/${eventId}/import-squadding`,
+    { bays, replace },
+  ),
+  listSquads: (eventId: number) => request<Array<{
+    id: number;
+    event_id: number;
+    competitor_id: number;
+    day: string;
+    bay: number;
+    time_start: string | null;
+    time_end: string | null;
+    slot_number: number;
+  }>>('GET', `/api/match/events/${eventId}/squads`),
 
   // run timing
   listRuns: (eventId: number) =>

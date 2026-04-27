@@ -187,6 +187,25 @@ const stmt = {
   countCompetitorsWithBib: sqlite.prepare(
     `SELECT COUNT(*) AS c FROM match_competitors WHERE event_id = ? AND bib = ? AND id != ?`,
   ),
+  maxCompetitorBib: sqlite.prepare(
+    `SELECT MAX(CAST(bib AS INTEGER)) AS m FROM match_competitors WHERE event_id = ?`,
+  ),
+
+  // Squads (squadding import — see SetupPage)
+  insertSquad: sqlite.prepare(
+    `INSERT INTO match_squads (event_id, competitor_id, day, bay, time_start, time_end, slot_number)
+     VALUES (@eventId, @competitorId, @day, @bay, @timeStart, @timeEnd, @slotNumber)
+     ON CONFLICT(competitor_id) DO UPDATE SET
+       day = excluded.day,
+       bay = excluded.bay,
+       time_start = excluded.time_start,
+       time_end = excluded.time_end,
+       slot_number = excluded.slot_number`,
+  ),
+  listSquads: sqlite.prepare(
+    `SELECT * FROM match_squads WHERE event_id = ? ORDER BY day, bay, slot_number`,
+  ),
+  deleteSquadsByEvent: sqlite.prepare(`DELETE FROM match_squads WHERE event_id = ?`),
 
   // Run records
   upsertRunRecord: sqlite.prepare(
@@ -510,6 +529,112 @@ export const matchStorage = {
     if (row.c > 0) {
       throw new Error(`Bib ${bib} already in use in this event.`);
     }
+  },
+
+  // -------- Squadding import --------
+  /**
+   * Import a parsed PractiScore squadding document. Each shooter slot becomes a
+   * (competitor, squad) pair. If a division code is unknown, it's auto-created.
+   * If `replace` is true, all existing competitors and squads for the event are
+   * cleared first. Bibs are auto-assigned 3-digit, sequential, unique per event.
+   */
+  importSquadding(input: {
+    eventId: number;
+    bays: Array<{
+      day: 'FRIDAY' | 'SATURDAY' | 'SUNDAY' | 'STAFF';
+      bay: number;
+      timeStart: string | null;
+      timeEnd: string | null;
+      slots: Array<{
+        slotNumber: number;
+        firstName: string;
+        lastName: string;
+        divisionName: string; // e.g. "Nv 2-Gun", "2-Gun", "Pcc"
+      }>;
+    }>;
+    replace?: boolean;
+  }): { competitors: number; squads: number; divisions: number } {
+    const ev = this.getEvent(input.eventId);
+    if (!ev) throw new Error('event not found');
+
+    return sqlite.transaction(() => {
+      if (input.replace) {
+        stmt.deleteSquadsByEvent.run(input.eventId);
+        stmt.deleteCompetitorsByEvent.run(input.eventId);
+      }
+
+      // Resolve / create divisions on the fly. Code = ALLCAPS slug.
+      const existing = this.listDivisions(input.eventId);
+      const divByName = new Map<string, number>();
+      for (const d of existing) divByName.set(d.name.trim().toLowerCase(), d.id);
+      let divCreated = 0;
+      const divCodeOf = (name: string) =>
+        name.toUpperCase().replace(/[^A-Z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 16);
+
+      // Next bib (3-digit, zero-padded, continues from current max).
+      const maxRow = stmt.maxCompetitorBib.get(input.eventId) as { m: number | null };
+      let nextBib = (maxRow.m ?? 0) + 1;
+      const fmtBib = (n: number) => String(n).padStart(3, '0');
+
+      let competitors = 0;
+      let squads = 0;
+
+      for (const bay of input.bays) {
+        for (const slot of bay.slots) {
+          const divName = slot.divisionName.trim();
+          if (!divName) continue;
+          const key = divName.toLowerCase();
+          let divisionId = divByName.get(key);
+          if (!divisionId) {
+            const code = divCodeOf(divName);
+            const created = this.createDivision({
+              eventId: input.eventId,
+              code,
+              name: divName,
+              sortOrder: divByName.size,
+            });
+            divisionId = created.id;
+            divByName.set(key, divisionId);
+            divCreated++;
+          }
+
+          const bib = fmtBib(nextBib++);
+          const comp = this.createCompetitor({
+            eventId: input.eventId,
+            bib,
+            firstName: slot.firstName,
+            lastName: slot.lastName,
+            divisionId,
+          });
+          competitors++;
+
+          stmt.insertSquad.run({
+            eventId: input.eventId,
+            competitorId: comp.id,
+            day: bay.day,
+            bay: bay.bay,
+            timeStart: bay.timeStart,
+            timeEnd: bay.timeEnd,
+            slotNumber: slot.slotNumber,
+          });
+          squads++;
+        }
+      }
+
+      return { competitors, squads, divisions: divCreated };
+    })();
+  },
+  listSquads(eventId: number) {
+    return stmt.listSquads.all(eventId) as Array<{
+      id: number;
+      event_id: number;
+      competitor_id: number;
+      day: string;
+      bay: number;
+      time_start: string | null;
+      time_end: string | null;
+      slot_number: number;
+    }>;
   },
 
   // -------- Run records --------

@@ -271,6 +271,17 @@ CREATE TABLE IF NOT EXISTS match_obstacle_bon_counts (
   count INTEGER NOT NULL DEFAULT 0,
   UNIQUE(competitor_id, bon_type_id)
 );
+CREATE TABLE IF NOT EXISTS match_squads (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  event_id INTEGER NOT NULL,
+  competitor_id INTEGER NOT NULL UNIQUE,
+  day TEXT NOT NULL,            -- 'FRIDAY' | 'SATURDAY' | 'SUNDAY' | 'STAFF'
+  bay INTEGER NOT NULL,         -- bay/squad number from squadding source
+  time_start TEXT,              -- 'HH:MM' or NULL for STAFF squads
+  time_end TEXT,                -- 'HH:MM' or NULL for STAFF squads
+  slot_number INTEGER NOT NULL  -- 1-based position within the bay
+);
+CREATE INDEX IF NOT EXISTS ix_match_squads_event ON match_squads(event_id, day, bay, slot_number);
 CREATE INDEX IF NOT EXISTS ix_match_competitors_event ON match_competitors(event_id);
 CREATE INDEX IF NOT EXISTS ix_match_competitors_div ON match_competitors(division_id);
 CREATE INDEX IF NOT EXISTS ix_match_stages_event ON match_stages(event_id, sequence);

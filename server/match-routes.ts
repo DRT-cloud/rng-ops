@@ -293,6 +293,38 @@ export function registerMatchRoutes(app: Express): void {
     res.json({ added, skipped, errors });
   });
 
+  /**
+   * Import a parsed PractiScore squadding document.
+   * Body: { bays: Array<{ day, bay, timeStart, timeEnd, slots: [{slotNumber, firstName, lastName, divisionName}] }>, replace?: boolean }
+   * Auto-creates divisions and assigns sequential 3-digit bibs.
+   */
+  app.post('/api/match/events/:id/import-squadding', (req, res) => {
+    const eventId = Number(req.params.id);
+    const event = matchStorage.getEvent(eventId);
+    if (!event) return res.status(404).json({ error: 'event not found' });
+    const bays = Array.isArray(req.body?.bays) ? req.body.bays : null;
+    if (!bays || bays.length === 0) {
+      return res.status(400).json({ error: 'bays array required' });
+    }
+    try {
+      const result = matchStorage.importSquadding({
+        eventId,
+        bays,
+        replace: Boolean(req.body?.replace),
+      });
+      res.json({ ok: true, ...result });
+    } catch (e: any) {
+      res.status(400).json({ error: e?.message ?? String(e) });
+    }
+  });
+
+  /** List squad assignments for an event. */
+  app.get('/api/match/events/:id/squads', (req, res) => {
+    const eventId = Number(req.params.id);
+    if (!matchStorage.getEvent(eventId)) return res.status(404).json({ error: 'event not found' });
+    res.json(matchStorage.listSquads(eventId));
+  });
+
   // ---------- Run start/finish ----------
   app.get('/api/match/events/:id/runs', (req, res) => {
     const eventId = Number(req.params.id);
