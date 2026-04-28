@@ -1,0 +1,18 @@
+/* Local font bundle — @fontsource ships the woff2 files inside node_modules,
+ * Vite inlines them at build time. No network requests at runtime (constraint C2).
+ *
+ * Weights selected per docs/RNG_Ops_v3_Project_Memory.md §12.3:
+ *   Barlow Condensed: 700 (section headings), 800 (display/hero)
+ *   Inter: 400 (body), 600 (subheading/label/SemiBold), 700 (CTA bold)
+ *   JetBrains Mono: 400 (mono body), 600 (mono emphasis)
+ */
+
+@import "@fontsource/barlow-condensed/700.css";
+@import "@fontsource/barlow-condensed/800.css";
+
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/600.css";

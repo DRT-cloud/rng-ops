@@ -1,0 +1,46 @@
+/* === RNG Ops v3 — Dark Industrial framework + Twilight identity ===
+ * Source of truth: docs/RNG_Ops_v3_Project_Memory.md §12.2
+ * Structural backgrounds, text, semantic accents, status, and font stacks.
+ * Fonts are bundled locally (see fonts.css) per constraint C2 — no CDN at runtime.
+ */
+
+:root {
+  /* Structural backgrounds */
+  --rng-bg-base:           #0F1114;   /* Forge Black — page/app background */
+  --rng-bg-surface:        #1C2128;   /* Charcoal Steel — cards, panels, sidebars */
+  --rng-bg-elevated:       #2E3440;   /* Gunmetal — modals, dropdowns, hover rows */
+  --rng-border:            #4A5568;   /* Steel Gray — hairlines, input borders */
+
+  /* Text */
+  --rng-text-primary:      #F4F5F7;   /* Crisp White — headlines, high-contrast labels */
+  --rng-text-body:         #B0BAC9;   /* Vapor — paragraph copy, table cells */
+  --rng-text-muted:        #4A5568;   /* Steel Gray — captions, timestamps */
+
+  /* Semantic accents (Dark Industrial 3-color system) */
+  --rng-action:            #CC2229;   /* Brand Red — CTAs, APPROVE & RECORD */
+  --rng-action-hover:      #A81B21;
+  --rng-info:              #2358A6;   /* Brand Blue — links, table headers, info */
+  --rng-info-hover:        #1A4080;
+  --rng-warning:           #F5C518;   /* Safety Yellow — caution callouts (≤10% surface) */
+
+  /* Status (Twilight NV Green reserved exclusively for OK / synced / done) */
+  --rng-status-ok:         #00E474;   /* NV Green — RECORDED, synced, complete */
+  --rng-status-pending:    #B0BAC9;   /* Vapor — PENDING, neutral */
+  --rng-status-edited:     #F5C518;   /* Safety Yellow — EDITED (has prior history) */
+  --rng-status-error:      #CC2229;   /* Brand Red — sync conflict, validation error */
+
+  /* Font stacks (Twilight identity, locally bundled) */
+  --rng-font-display:      'Barlow Condensed', 'Arial Narrow', Arial, sans-serif;
+  --rng-font-body:         'Inter', system-ui, -apple-system, Arial, sans-serif;
+  --rng-font-mono:         'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+}
+
+/* Section accent bar — §12.6
+ * 3px solid Brand Red ~48px wide beneath section/stage headlines.
+ */
+.rng-accent-bar {
+  display: block;
+  width: 48px;
+  height: 3px;
+  background: var(--rng-action);
+}
