@@ -1,0 +1,41 @@
+{
+  "name": "rng-ops-v3",
+  "version": "3.0.0-phase1",
+  "private": true,
+  "description": "RNG Ops v3 — range operations console (Pocketbase + React, fully offline at events).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit"
+  },
+  "dependencies": {
+    "@fontsource/barlow-condensed": "5.1.0",
+    "@fontsource/inter": "5.1.0",
+    "@fontsource/jetbrains-mono": "5.1.0",
+    "@radix-ui/react-slot": "1.1.0",
+    "@tanstack/react-query": "5.59.20",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "idb": "8.0.0",
+    "lucide-react": "0.460.0",
+    "pocketbase": "0.25.2",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "tailwind-merge": "2.5.4",
+    "wouter": "3.3.5",
+    "zustand": "5.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.9.0",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "autoprefixer": "10.4.20",
+    "postcss": "8.4.49",
+    "tailwindcss": "3.4.14",
+    "typescript": "5.6.3",
+    "vite": "5.4.10"
+  }
+}

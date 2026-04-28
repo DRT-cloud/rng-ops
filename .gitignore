@@ -30,6 +30,10 @@ pb_data/
 pb_data_backup/
 pocketbase.exe
 
+# v3: Vite build output served by Pocketbase (regenerated on every build).
+# pb_migrations/ and pb_hooks/ ARE tracked.
+pb_public/
+
 # Local certs (sensitive)
 certs/
 *.pem
