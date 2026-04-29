@@ -1,0 +1,22 @@
+{
+  "_comment": "Phase 1 PLACEHOLDER manifest. The two icon paths below intentionally reference files that do NOT exist yet — Phase 5 will source real icons from the Twilight logo per docs/RNG_Ops_v3_Project_Memory.md §12.7. DO NOT 'fix' the 404s in DevTools by removing the icon entries; that defers the real work and breaks PWA install once icons land. Tracked in the Phase 5 todo. The _comment key is non-standard; browsers ignore unknown manifest fields silently.",
+  "name": "RNG Ops",
+  "short_name": "RNG Ops",
+  "description": "Range operations console",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F1114",
+  "theme_color": "#CC2229",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
