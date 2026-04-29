@@ -32,6 +32,50 @@
  * explicitly. Only match_events and match_audit need `created_at` per §7.1
  * and §7.9 of the project memory; score event tables use `recorded_at_ms`
  * instead and do not need autodate.
+ *
+ * PB version note (0-as-blank quirk + canonical number-field conventions):
+ *
+ * PB 0.23+ rejects the value 0 on a `required: true, type: "number"` field
+ * with "cannot be blank". Fields that legitimately need to store 0 must be
+ * either (a) `required: false` so the app layer can distinguish unset from
+ * zero, or (b) treated as 1-indexed by convention. Use this section as the
+ * canonical reference when adding any number field in a future migration.
+ *
+ * 1-indexed by convention (display ordering, sequence, slot counters):
+ *   - match_divisions.sort_order        min: 1, required: true
+ *   - match_stages.sort_order           min: 1, required: true
+ *   - match_obstacle_stations.sort_order min: 1, required: true
+ *   - match_stage_catalog.sort_order    min: 1, required: true
+ *   - match_obstacle_catalog.sort_order min: 1, required: true
+ *   - match_squads.slot_number          min: 1, required: true (per spec sample data)
+ *   - match_run_schedule.group_size     min: 1, required: true
+ *   - match_run_schedule.sequence       min: 1, required: true
+ *
+ * The seed hook (pb_hooks/seed_default_catalogs.pb.js) emits sort_order: 1
+ * for the default catalog row; operator-added entries should start at 2+.
+ *
+ * Convention for match_run_schedule.start_group_id (required: false): group
+ * ids start at 1; null means "ungrouped, leaves alone". Step E's run-
+ * schedule generator should follow this when emitting start_group_id.
+ *
+ * Flipped to required: false so 0 is a legitimate operator-chosen value:
+ *   - match_events.default_interval_seconds         (0 = no spacing between starts)
+ *   - match_events.default_obstacle_penalty_seconds (0 = no default penalty)
+ *
+ * Saved-by-domain exceptions — fields that keep required: true even though
+ * PB rejects 0, because 0 is unreachable or invalid in their domain. This
+ * is NOT a pattern to copy in future migrations:
+ *   - match_*_score_events.recorded_at_ms / match_run_events.recorded_at_ms
+ *     and match_run_schedule.scheduled_at_ms — epoch milliseconds; 0 is
+ *     1970-01-01 and unreachable in practice.
+ *   - match_stage_catalog.seconds, match_obstacle_catalog.seconds — a
+ *     catalog entry that doesn't change time is useless data, regardless
+ *     of penalty vs. bonus kind. NOT min:1 — fractional values like 0.5
+ *     remain valid.
+ *
+ * Future rule: if a new number field could legitimately be 0 (relative
+ * offsets, counts, durations a user might choose to zero out), declare
+ * it required: false. Do not rely on the saved-by-domain exception above.
  */
 
 migrate(
@@ -51,8 +95,8 @@ migrate(
         { name: "name", type: "text", required: true, max: 200 },
         { name: "event_date", type: "date", required: true },
         { name: "start_time", type: "text", required: false, max: 8 },
-        { name: "default_interval_seconds", type: "number", required: true, min: 0 },
-        { name: "default_obstacle_penalty_seconds", type: "number", required: true, min: 0 },
+        { name: "default_interval_seconds", type: "number", required: false, min: 0 },
+        { name: "default_obstacle_penalty_seconds", type: "number", required: false, min: 0 },
         { name: "status", type: "select", required: true, maxSelect: 1, values: STATUS_EVENT },
         { name: "backup_path", type: "text", required: false, max: 500 },
         { name: "created", type: "autodate", onCreate: true },
@@ -68,7 +112,7 @@ migrate(
         { name: "event", type: "relation", required: true, collectionId: events.id, cascadeDelete: true, maxSelect: 1 },
         { name: "code", type: "text", required: true, max: 50 },
         { name: "name", type: "text", required: true, max: 100 },
-        { name: "sort_order", type: "number", required: true, min: 0 },
+        { name: "sort_order", type: "number", required: true, min: 1 },
       ],
       indexes: [
         "CREATE UNIQUE INDEX `idx_match_divisions_event_code` ON `match_divisions` (`event`, `code`)",
@@ -84,7 +128,7 @@ migrate(
         { name: "event", type: "relation", required: true, collectionId: events.id, cascadeDelete: true, maxSelect: 1 },
         { name: "code", type: "text", required: true, max: 50 },
         { name: "name", type: "text", required: true, max: 100 },
-        { name: "sort_order", type: "number", required: true, min: 0 },
+        { name: "sort_order", type: "number", required: true, min: 1 },
       ],
       indexes: [
         "CREATE UNIQUE INDEX `idx_match_stages_event_code` ON `match_stages` (`event`, `code`)",
@@ -100,7 +144,7 @@ migrate(
         { name: "event", type: "relation", required: true, collectionId: events.id, cascadeDelete: true, maxSelect: 1 },
         { name: "code", type: "text", required: true, max: 50 },
         { name: "name", type: "text", required: true, max: 100 },
-        { name: "sort_order", type: "number", required: true, min: 0 },
+        { name: "sort_order", type: "number", required: true, min: 1 },
       ],
       indexes: [
         "CREATE UNIQUE INDEX `idx_match_obstacle_stations_event_code` ON `match_obstacle_stations` (`event`, `code`)",
@@ -119,7 +163,7 @@ migrate(
         { name: "label", type: "text", required: true, max: 100 },
         { name: "seconds", type: "number", required: true },
         { name: "kind", type: "select", required: true, maxSelect: 1, values: KIND },
-        { name: "sort_order", type: "number", required: true, min: 0 },
+        { name: "sort_order", type: "number", required: true, min: 1 },
         { name: "is_active", type: "bool", required: false },
       ],
       indexes: [
@@ -139,7 +183,7 @@ migrate(
         { name: "label", type: "text", required: true, max: 100 },
         { name: "seconds", type: "number", required: true },
         { name: "kind", type: "select", required: true, maxSelect: 1, values: KIND },
-        { name: "sort_order", type: "number", required: true, min: 0 },
+        { name: "sort_order", type: "number", required: true, min: 1 },
         { name: "is_active", type: "bool", required: false },
       ],
       indexes: [
@@ -196,7 +240,7 @@ migrate(
         { name: "scheduled_at_ms", type: "number", required: true },
         { name: "start_group_id", type: "number", required: false },
         { name: "group_size", type: "number", required: true, min: 1 },
-        { name: "sequence", type: "number", required: true, min: 0 },
+        { name: "sequence", type: "number", required: true, min: 1 },
       ],
       indexes: [
         "CREATE UNIQUE INDEX `idx_match_run_schedule_event_competitor` ON `match_run_schedule` (`event`, `competitor`)",

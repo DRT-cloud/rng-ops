@@ -3,7 +3,7 @@
     "spec": "docs/RNG_Ops_v3_Project_Memory.md §7",
     "pocketbase_compat": "0.37.x",
     "snapshot_after": "1777334401_active_views.js",
-    "note": "Hand-curated mirror of the migration files. Update after every migration so git diffs show schema changes without running PB. PB 0.23+ only auto-creates `id`; `created`/`updated` columns require an explicit `autodate` field. Per §7.1/§7.9, `match_events` and `match_audit` declare `created` autodate; other collections do not."
+    "note": "Hand-curated mirror of the migration files. Update after every migration so git diffs show schema changes without running PB. PB 0.23+ only auto-creates `id`; `created`/`updated` columns require an explicit `autodate` field. Per §7.1/§7.9, `match_events` and `match_audit` declare `created` autodate; other collections do not. PB 0.23+ also rejects 0 on `required:true` number fields ('cannot be blank') — see the 0-as-blank/1-indexed convention block in pb_migrations/1777334400_init_collections.js for the canonical rules and field list."
   },
   "collections": [
     {
@@ -14,8 +14,8 @@
         { "name": "name", "type": "text", "required": true, "max": 200 },
         { "name": "event_date", "type": "date", "required": true },
         { "name": "start_time", "type": "text", "required": false, "max": 8 },
-        { "name": "default_interval_seconds", "type": "number", "required": true, "min": 0 },
-        { "name": "default_obstacle_penalty_seconds", "type": "number", "required": true, "min": 0 },
+        { "name": "default_interval_seconds", "type": "number", "required": false, "min": 0 },
+        { "name": "default_obstacle_penalty_seconds", "type": "number", "required": false, "min": 0 },
         { "name": "status", "type": "select", "required": true, "maxSelect": 1, "values": ["pending", "active", "data_collection", "closed"] },
         { "name": "backup_path", "type": "text", "required": false, "max": 500 },
         { "name": "created", "type": "autodate", "onCreate": true, "spec_note": "Satisfies §7.1 created_at. PB 0.23+ no longer auto-creates this column." }
@@ -30,7 +30,7 @@
         { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
         { "name": "code", "type": "text", "required": true, "max": 50 },
         { "name": "name", "type": "text", "required": true, "max": 100 },
-        { "name": "sort_order", "type": "number", "required": true, "min": 0 }
+        { "name": "sort_order", "type": "number", "required": true, "min": 1 }
       ],
       "indexes": [
         "UNIQUE (event, code)"
@@ -44,7 +44,7 @@
         { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
         { "name": "code", "type": "text", "required": true, "max": 50 },
         { "name": "name", "type": "text", "required": true, "max": 100 },
-        { "name": "sort_order", "type": "number", "required": true, "min": 0 }
+        { "name": "sort_order", "type": "number", "required": true, "min": 1 }
       ],
       "indexes": [
         "UNIQUE (event, code)"
@@ -58,7 +58,7 @@
         { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
         { "name": "code", "type": "text", "required": true, "max": 50 },
         { "name": "name", "type": "text", "required": true, "max": 100 },
-        { "name": "sort_order", "type": "number", "required": true, "min": 0 }
+        { "name": "sort_order", "type": "number", "required": true, "min": 1 }
       ],
       "indexes": [
         "UNIQUE (event, code)"
@@ -75,7 +75,7 @@
         { "name": "label", "type": "text", "required": true, "max": 100 },
         { "name": "seconds", "type": "number", "required": true },
         { "name": "kind", "type": "select", "required": true, "maxSelect": 1, "values": ["penalty", "bonus"] },
-        { "name": "sort_order", "type": "number", "required": true, "min": 0 },
+        { "name": "sort_order", "type": "number", "required": true, "min": 1 },
         { "name": "is_active", "type": "bool", "required": false }
       ],
       "indexes": [
@@ -93,7 +93,7 @@
         { "name": "label", "type": "text", "required": true, "max": 100 },
         { "name": "seconds", "type": "number", "required": true },
         { "name": "kind", "type": "select", "required": true, "maxSelect": 1, "values": ["penalty", "bonus"] },
-        { "name": "sort_order", "type": "number", "required": true, "min": 0 },
+        { "name": "sort_order", "type": "number", "required": true, "min": 1 },
         { "name": "is_active", "type": "bool", "required": false }
       ],
       "indexes": [
@@ -144,7 +144,7 @@
         { "name": "scheduled_at_ms", "type": "number", "required": true },
         { "name": "start_group_id", "type": "number", "required": false },
         { "name": "group_size", "type": "number", "required": true, "min": 1 },
-        { "name": "sequence", "type": "number", "required": true, "min": 0 }
+        { "name": "sequence", "type": "number", "required": true, "min": 1 }
       ],
       "indexes": [
         "UNIQUE (event, competitor)"
