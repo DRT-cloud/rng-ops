@@ -1,0 +1,274 @@
+{
+  "_meta": {
+    "spec": "docs/RNG_Ops_v3_Project_Memory.md §7",
+    "pocketbase_compat": "0.37.x",
+    "snapshot_after": "1777334401_active_views.js",
+    "note": "Hand-curated mirror of the migration files. Update after every migration so git diffs show schema changes without running PB. PB 0.23+ only auto-creates `id`; `created`/`updated` columns require an explicit `autodate` field. Per §7.1/§7.9, `match_events` and `match_audit` declare `created` autodate; other collections do not."
+  },
+  "collections": [
+    {
+      "name": "match_events",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "name", "type": "text", "required": true, "max": 200 },
+        { "name": "event_date", "type": "date", "required": true },
+        { "name": "start_time", "type": "text", "required": false, "max": 8 },
+        { "name": "default_interval_seconds", "type": "number", "required": true, "min": 0 },
+        { "name": "default_obstacle_penalty_seconds", "type": "number", "required": true, "min": 0 },
+        { "name": "status", "type": "select", "required": true, "maxSelect": 1, "values": ["pending", "active", "data_collection", "closed"] },
+        { "name": "backup_path", "type": "text", "required": false, "max": 500 },
+        { "name": "created", "type": "autodate", "onCreate": true, "spec_note": "Satisfies §7.1 created_at. PB 0.23+ no longer auto-creates this column." }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "match_divisions",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "code", "type": "text", "required": true, "max": 50 },
+        { "name": "name", "type": "text", "required": true, "max": 100 },
+        { "name": "sort_order", "type": "number", "required": true, "min": 0 }
+      ],
+      "indexes": [
+        "UNIQUE (event, code)"
+      ]
+    },
+    {
+      "name": "match_stages",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "code", "type": "text", "required": true, "max": 50 },
+        { "name": "name", "type": "text", "required": true, "max": 100 },
+        { "name": "sort_order", "type": "number", "required": true, "min": 0 }
+      ],
+      "indexes": [
+        "UNIQUE (event, code)"
+      ]
+    },
+    {
+      "name": "match_obstacle_stations",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "code", "type": "text", "required": true, "max": 50 },
+        { "name": "name", "type": "text", "required": true, "max": 100 },
+        { "name": "sort_order", "type": "number", "required": true, "min": 0 }
+      ],
+      "indexes": [
+        "UNIQUE (event, code)"
+      ]
+    },
+    {
+      "name": "match_stage_catalog",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "stage", "type": "relation", "required": true, "collection": "match_stages", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "code", "type": "text", "required": true, "max": 50 },
+        { "name": "label", "type": "text", "required": true, "max": 100 },
+        { "name": "seconds", "type": "number", "required": true },
+        { "name": "kind", "type": "select", "required": true, "maxSelect": 1, "values": ["penalty", "bonus"] },
+        { "name": "sort_order", "type": "number", "required": true, "min": 0 },
+        { "name": "is_active", "type": "bool", "required": false }
+      ],
+      "indexes": [
+        "UNIQUE (event, stage, code)"
+      ]
+    },
+    {
+      "name": "match_obstacle_catalog",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "obstacle_station", "type": "relation", "required": true, "collection": "match_obstacle_stations", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "code", "type": "text", "required": true, "max": 50 },
+        { "name": "label", "type": "text", "required": true, "max": 100 },
+        { "name": "seconds", "type": "number", "required": true },
+        { "name": "kind", "type": "select", "required": true, "maxSelect": 1, "values": ["penalty", "bonus"] },
+        { "name": "sort_order", "type": "number", "required": true, "min": 0 },
+        { "name": "is_active", "type": "bool", "required": false }
+      ],
+      "indexes": [
+        "UNIQUE (event, obstacle_station, code)"
+      ]
+    },
+    {
+      "name": "match_competitors",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "bib", "type": "text", "required": true, "min": 4, "max": 4, "pattern": "^\\d{4}$", "spec_note": "4-digit SSSL per C9" },
+        { "name": "first_name", "type": "text", "required": true, "max": 100 },
+        { "name": "last_name", "type": "text", "required": true, "max": 100 },
+        { "name": "division", "type": "relation", "required": true, "collection": "match_divisions", "cascadeDelete": false, "maxSelect": 1 },
+        { "name": "status", "type": "select", "required": true, "maxSelect": 1, "values": ["registered", "checked_in", "late_arrival", "no_show", "withdrawn"] },
+        { "name": "shooter_id", "type": "text", "required": false, "max": 100 }
+      ],
+      "indexes": [
+        "UNIQUE (event, bib)"
+      ]
+    },
+    {
+      "name": "match_squads",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "competitor", "type": "relation", "required": true, "collection": "match_competitors", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "day", "type": "number", "required": false, "min": 1 },
+        { "name": "bay", "type": "text", "required": false, "max": 50 },
+        { "name": "time_start", "type": "text", "required": false, "max": 8 },
+        { "name": "time_end", "type": "text", "required": false, "max": 8 },
+        { "name": "slot_number", "type": "number", "required": true, "min": 1 }
+      ],
+      "indexes": [
+        "UNIQUE (event, competitor)"
+      ]
+    },
+    {
+      "name": "match_run_schedule",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "competitor", "type": "relation", "required": true, "collection": "match_competitors", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "scheduled_at_ms", "type": "number", "required": true },
+        { "name": "start_group_id", "type": "number", "required": false },
+        { "name": "group_size", "type": "number", "required": true, "min": 1 },
+        { "name": "sequence", "type": "number", "required": true, "min": 0 }
+      ],
+      "indexes": [
+        "UNIQUE (event, competitor)"
+      ]
+    },
+    {
+      "name": "match_run_events",
+      "type": "base",
+      "system_fields": ["id"],
+      "spec_note": "Event-sourced. `supersedes` is self-referential, added in pass 2. `recorded_device_id` and `recorded_by` are required:false at DB layer; app layer defaults blanks to 'unset'/'unknown' before write so a fresh tablet on opening morning is never blocked.",
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "competitor", "type": "relation", "required": true, "collection": "match_competitors", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "start_ms", "type": "number", "required": false },
+        { "name": "finish_ms", "type": "number", "required": false },
+        { "name": "status", "type": "select", "required": true, "maxSelect": 1, "values": ["ok", "no_show"] },
+        { "name": "recorded_device_id", "type": "text", "required": false, "max": 100 },
+        { "name": "recorded_by", "type": "text", "required": false, "max": 100 },
+        { "name": "recorded_at_ms", "type": "number", "required": true },
+        { "name": "superseded_at_ms", "type": "number", "required": false },
+        { "name": "edit_reason", "type": "text", "required": false, "max": 500 },
+        { "name": "supersedes", "type": "relation", "required": false, "collection": "match_run_events", "cascadeDelete": false, "maxSelect": 1 }
+      ],
+      "indexes": [
+        "INDEX (superseded_at_ms)"
+      ]
+    },
+    {
+      "name": "match_stage_score_events",
+      "type": "base",
+      "system_fields": ["id"],
+      "spec_note": "Event-sourced. `supersedes` is self-referential, added in pass 2. `recorded_device_id` / `recorded_by` required:false; see runEvents note.",
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "stage", "type": "relation", "required": true, "collection": "match_stages", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "competitor", "type": "relation", "required": true, "collection": "match_competitors", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "wait_seconds", "type": "number", "required": false, "min": 0 },
+        { "name": "raw_seconds", "type": "number", "required": false, "min": 0 },
+        { "name": "dns", "type": "bool", "required": false },
+        { "name": "selections_json", "type": "json", "required": false, "maxSize": 50000 },
+        { "name": "recorded_device_id", "type": "text", "required": false, "max": 100 },
+        { "name": "recorded_by", "type": "text", "required": false, "max": 100 },
+        { "name": "recorded_at_ms", "type": "number", "required": true },
+        { "name": "synced_at_ms", "type": "number", "required": false },
+        { "name": "superseded_at_ms", "type": "number", "required": false },
+        { "name": "edit_reason", "type": "text", "required": false, "max": 500 },
+        { "name": "supersedes", "type": "relation", "required": false, "collection": "match_stage_score_events", "cascadeDelete": false, "maxSelect": 1 }
+      ],
+      "indexes": [
+        "INDEX (superseded_at_ms)"
+      ]
+    },
+    {
+      "name": "match_obstacle_score_events",
+      "type": "base",
+      "system_fields": ["id"],
+      "spec_note": "Event-sourced. `supersedes` is self-referential, added in pass 2. `recorded_device_id` / `recorded_by` required:false; see runEvents note.",
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "obstacle_station", "type": "relation", "required": true, "collection": "match_obstacle_stations", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "competitor", "type": "relation", "required": true, "collection": "match_competitors", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "selections_json", "type": "json", "required": false, "maxSize": 50000 },
+        { "name": "recorded_device_id", "type": "text", "required": false, "max": 100 },
+        { "name": "recorded_by", "type": "text", "required": false, "max": 100 },
+        { "name": "recorded_at_ms", "type": "number", "required": true },
+        { "name": "synced_at_ms", "type": "number", "required": false },
+        { "name": "superseded_at_ms", "type": "number", "required": false },
+        { "name": "edit_reason", "type": "text", "required": false, "max": 500 },
+        { "name": "supersedes", "type": "relation", "required": false, "collection": "match_obstacle_score_events", "cascadeDelete": false, "maxSelect": 1 }
+      ],
+      "indexes": [
+        "INDEX (superseded_at_ms)"
+      ]
+    },
+    {
+      "name": "match_audit",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "actor", "type": "text", "required": true, "max": 100 },
+        { "name": "actor_role", "type": "text", "required": false, "max": 50 },
+        { "name": "actor_device_id", "type": "text", "required": false, "max": 100 },
+        { "name": "action", "type": "text", "required": true, "max": 200 },
+        { "name": "payload_json", "type": "json", "required": false, "maxSize": 100000 },
+        { "name": "created", "type": "autodate", "onCreate": true, "spec_note": "Satisfies §7.9 created_at." }
+      ],
+      "indexes": []
+    },
+    {
+      "name": "match_sync_conflicts",
+      "type": "base",
+      "system_fields": ["id"],
+      "fields": [
+        { "name": "event", "type": "relation", "required": true, "collection": "match_events", "cascadeDelete": true, "maxSelect": 1 },
+        { "name": "target_table", "type": "text", "required": true, "max": 100 },
+        { "name": "target_key_json", "type": "json", "required": true, "maxSize": 5000 },
+        { "name": "losing_payload_json", "type": "json", "required": true, "maxSize": 100000 },
+        { "name": "reason", "type": "text", "required": true, "max": 500 },
+        { "name": "resolved", "type": "bool", "required": false },
+        { "name": "resolved_by", "type": "text", "required": false, "max": 100 },
+        { "name": "resolved_at_ms", "type": "number", "required": false }
+      ],
+      "indexes": []
+    }
+  ],
+  "views": [
+    {
+      "name": "v_active_stage_scores",
+      "from": "match_stage_score_events",
+      "where": "superseded_at_ms IS NULL",
+      "columns": ["id", "event", "stage", "competitor", "wait_seconds", "raw_seconds", "dns", "selections_json", "recorded_device_id", "recorded_by", "recorded_at_ms", "synced_at_ms", "supersedes", "superseded_at_ms", "edit_reason"]
+    },
+    {
+      "name": "v_active_obstacle_scores",
+      "from": "match_obstacle_score_events",
+      "where": "superseded_at_ms IS NULL",
+      "columns": ["id", "event", "obstacle_station", "competitor", "selections_json", "recorded_device_id", "recorded_by", "recorded_at_ms", "synced_at_ms", "supersedes", "superseded_at_ms", "edit_reason"]
+    },
+    {
+      "name": "v_active_run_records",
+      "from": "match_run_events",
+      "where": "superseded_at_ms IS NULL",
+      "columns": ["id", "event", "competitor", "start_ms", "finish_ms", "status", "recorded_device_id", "recorded_by", "recorded_at_ms", "supersedes", "superseded_at_ms", "edit_reason"]
+    }
+  ]
+}
