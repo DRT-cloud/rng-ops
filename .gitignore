@@ -34,6 +34,9 @@ pocketbase.exe
 # pb_migrations/ and pb_hooks/ ARE tracked.
 pb_public/
 
+# TypeScript incremental build cache (created by tsc -b)
+*.tsbuildinfo
+
 # Local certs (sensitive)
 certs/
 *.pem
